@@ -1,0 +1,25 @@
+{
+  "name": "mewsops",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx src/index.ts",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "demo-reset": "tsx scripts/demo-reset.ts"
+  },
+  "dependencies": {
+    "@openai/agents": "latest",
+    "better-sqlite3": "latest",
+    "dotenv": "latest",
+    "zod": "latest"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "latest",
+    "@types/node": "latest",
+    "tsx": "latest",
+    "typescript": "latest",
+    "vitest": "latest"
+  }
+}
