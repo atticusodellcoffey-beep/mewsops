@@ -364,11 +364,12 @@ export function createSqlitePort(db: Db): DomainPort {
           const r = value as Entities["alerts"];
           if (exists) {
             db.prepare(
-              "UPDATE alerts SET level=?, reasons=?, evidence_ids=? WHERE id=?",
+              "UPDATE alerts SET level=?, reasons=?, evidence_ids=?, status=? WHERE id=?",
             ).run(
               r.level,
               json([r.statement]),
               json(r.evidenceIds ?? [r.reportId]),
+              r.status ?? "open",
               r.id,
             );
             break;

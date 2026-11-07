@@ -155,6 +155,7 @@ export function createDomainServices(p: DomainPort) {
     submitReport(a: Actor, input: ReportInput): Report {
       actorValid(a);
       input = validateReportInput(input);
+      nonempty(input.selectedColonyId, "selectedColonyId");
       nonempty(input.clientRequestId, "clientRequestId");
       nonempty(input.text, "text");
       if (
@@ -330,6 +331,33 @@ export function createDomainServices(p: DomainPort) {
                 a.assignedColonyIds.includes(x.colonyId) &&
                 own.has(x.reportId))),
         );
+    },
+    resolveAlert(a: Actor, alertId: string, reason: string) {
+      staff(a);
+      nonempty(reason, "reason");
+      if (reason.length > 2000) fail("VALIDATION", "Reason is too long");
+      return p.transaction(() => {
+        const alert = get("alerts", alertId);
+        if (alert.status === "resolved") fail("CONFLICT", "Alert already resolved", 409);
+        p.put("alerts", { ...alert, status: "resolved" });
+        audit(a, "resolve_alert", alert.id, { reason, reportId: alert.reportId });
+        return { alertId: alert.id, status: "resolved" as const };
+      });
+    },
+    correctObservationLink(a: Actor, observationId: string, reason: string) {
+      staff(a);
+      nonempty(reason, "reason");
+      if (reason.length > 2000) fail("VALIDATION", "Reason is too long");
+      return p.transaction(() => {
+        const observation = get("observations", observationId);
+        if (!observation.catId) fail("CONFLICT", "Observation has no confirmed link", 409);
+        const report = get("reports", observation.reportId);
+        const previousCatId = observation.catId;
+        p.put("observations", { ...observation, catId: null });
+        p.put("reports", { ...report, status: "needs_review" });
+        audit(a, "correct_observation_link", observationId, { reason, previousCatId, reportId: report.id });
+        return { observationId, previousCatId, status: "needs_review" as const };
+      });
     },
     recordFeedingVisit(
       a: Actor,
