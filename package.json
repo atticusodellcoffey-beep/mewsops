@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "tsx src/index.ts",
+    "demo": "tsx src/index.ts --demo",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "demo-reset": "tsx scripts/demo-reset.ts"

@@ -14,10 +14,18 @@ MewsOps turns intentional volunteer reports, synthetic WhatsApp exports, photos,
 
 ```sh
 npm install
-cp .env.example .env
 npm run typecheck
-npm run demo-reset
+npm test
 npm run dev
+npm run demo
 ```
 
-Live OpenAI mode is optional. Replay mode is the required fallback. This project does not connect to or scrape WhatsApp and must not contain real rescue data.
+The backend walkthrough uses real local SQLite persistence and a deterministic proposal fixture. It does not call OpenAI or inspect images. No API key is required for these commands. `npm run dev` prints a backend summary; it does not start an HTTP server.
+
+To explicitly reset the synthetic demo database, run `npm run demo-reset -- --confirm-demo-reset`. It refuses custom paths and unrecognized databases. The database lives at `storage/mewsops-demo.db` and is excluded from Git.
+
+The API and agent lanes will add sessions, transport, uploads, and live inference. This project does not connect to or scrape WhatsApp and must not contain real rescue data. Local SQLite is not a durable Vercel Functions storage solution.
+
+See [backend decisions](docs/backend-build-decisions.md) and [teammate handoff](docs/backend-handoff.md) for the integration boundaries.
+
+The [verification report](docs/backend-verification.md) records the executed checks and remaining integration work.
