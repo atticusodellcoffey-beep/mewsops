@@ -65,6 +65,7 @@ export function resetDemo(args: string[]): void {
         "review_requests",
         "audit_events",
         "merge_aliases",
+        "proposal_receipts",
       ]);
       if (tables.some((t) => !allowed.has(t.name)))
         throw new Error("Unexpected tables; refusing demo reset");

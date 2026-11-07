@@ -21,33 +21,43 @@ const proposalSchema = z
   .object({
     reportId: identifier,
     colonyCandidates: z
-      .array(z.object({ colonyId: identifier, evidenceIds: evidence, reasons }))
+      .array(
+        z
+          .object({ colonyId: identifier, evidenceIds: evidence, reasons })
+          .strict(),
+      )
       .max(18),
     catCandidates: z
       .array(
-        z.object({
-          catId: identifier,
-          evidenceIds: evidence,
-          reasons,
-          contradictions: reasons,
-        }),
+        z
+          .object({
+            catId: identifier,
+            evidenceIds: evidence,
+            reasons,
+            contradictions: reasons,
+          })
+          .strict(),
       )
       .max(20),
     observations: z
       .array(
-        z.object({
-          kind: z.string().min(1).max(100),
-          statement: text,
-          source: z.enum(["reporter", "visual"]),
-          evidenceIds: evidence,
-        }),
+        z
+          .object({
+            kind: z.string().min(1).max(100),
+            statement: text,
+            source: z.enum(["reporter", "visual"]),
+            evidenceIds: evidence,
+          })
+          .strict(),
       )
       .max(50),
-    urgency: z.object({
-      level: z.enum(["routine", "watch", "same_day_review"]),
-      reasons,
-      evidenceIds: evidence,
-    }),
+    urgency: z
+      .object({
+        level: z.enum(["routine", "watch", "same_day_review"]),
+        reasons,
+        evidenceIds: evidence,
+      })
+      .strict(),
     uncertainties: reasons,
   })
   .strict();

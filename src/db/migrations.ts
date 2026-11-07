@@ -9,9 +9,11 @@ CREATE TABLE media (id TEXT PRIMARY KEY, report_id TEXT REFERENCES reports(id), 
 CREATE TABLE observations (id TEXT PRIMARY KEY, report_id TEXT NOT NULL REFERENCES reports(id), cat_id TEXT REFERENCES cats(id), kind TEXT NOT NULL, statement TEXT NOT NULL, source TEXT NOT NULL CHECK(source IN ('reporter','visual','confirmed')), evidence_ids TEXT NOT NULL DEFAULT '[]' CHECK(json_valid(evidence_ids)), observed_at TEXT, created_at TEXT NOT NULL);
 CREATE TABLE feeding_visits (id TEXT PRIMARY KEY, colony_id TEXT NOT NULL REFERENCES colonies(id), feeder_id TEXT NOT NULL REFERENCES users(id), report_id TEXT REFERENCES reports(id), occurred_at TEXT NOT NULL, recorded_at TEXT NOT NULL, confirmed_by TEXT NOT NULL REFERENCES users(id), client_request_id TEXT NOT NULL, evidence TEXT NOT NULL, UNIQUE(feeder_id,client_request_id));
 CREATE TABLE alerts (id TEXT PRIMARY KEY, report_id TEXT NOT NULL REFERENCES reports(id), colony_id TEXT REFERENCES colonies(id), level TEXT NOT NULL CHECK(level IN ('routine','watch','same_day_review')), reasons TEXT NOT NULL CHECK(json_valid(reasons)), evidence_ids TEXT NOT NULL DEFAULT '[]' CHECK(json_valid(evidence_ids)), status TEXT NOT NULL DEFAULT 'open' CHECK(status IN ('open','resolved')), created_at TEXT NOT NULL);
+CREATE UNIQUE INDEX one_active_alert_per_report ON alerts(report_id) WHERE status='open';
 CREATE TABLE review_requests (id TEXT PRIMARY KEY, report_id TEXT NOT NULL REFERENCES reports(id), action TEXT NOT NULL CHECK(action IN ('link_observation','confirm_new_cat','merge_cats','mark_adopted','mark_missing')), status TEXT NOT NULL DEFAULT 'pending' CHECK(status IN ('pending','approved','rejected')), version INTEGER NOT NULL DEFAULT 1 CHECK(version>0), proposed_change TEXT NOT NULL CHECK(json_valid(proposed_change)), evidence_ids TEXT NOT NULL DEFAULT '[]' CHECK(json_valid(evidence_ids)), created_at TEXT NOT NULL, decided_by TEXT REFERENCES users(id), decided_at TEXT, decision_reason TEXT, target_snapshot TEXT NOT NULL DEFAULT '[]' CHECK(json_valid(target_snapshot)), receipt TEXT CHECK(receipt IS NULL OR json_valid(receipt)));
 CREATE TABLE audit_events (id TEXT PRIMARY KEY, actor_id TEXT NOT NULL REFERENCES users(id), action TEXT NOT NULL, entity_type TEXT NOT NULL, entity_id TEXT NOT NULL, before_json TEXT CHECK(before_json IS NULL OR json_valid(before_json)), after_json TEXT CHECK(after_json IS NULL OR json_valid(after_json)), reason TEXT NOT NULL, created_at TEXT NOT NULL);
 CREATE TABLE merge_aliases (id TEXT PRIMARY KEY, alias_cat_id TEXT NOT NULL REFERENCES cats(id), canonical_cat_id TEXT NOT NULL REFERENCES cats(id), created_by TEXT NOT NULL REFERENCES users(id), created_at TEXT NOT NULL, reversed_by TEXT REFERENCES users(id), reversed_at TEXT, reason TEXT NOT NULL, review_id TEXT REFERENCES review_requests(id), snapshot TEXT CHECK(snapshot IS NULL OR json_valid(snapshot)), after_version INTEGER, CHECK(alias_cat_id<>canonical_cat_id), CHECK((reversed_at IS NULL)=(reversed_by IS NULL)));
+CREATE TABLE proposal_receipts (id TEXT PRIMARY KEY, report_id TEXT NOT NULL UNIQUE REFERENCES reports(id), payload_hash TEXT NOT NULL, review_ids TEXT NOT NULL CHECK(json_valid(review_ids)), result_json TEXT NOT NULL CHECK(json_valid(result_json)), created_at TEXT NOT NULL);
 CREATE UNIQUE INDEX one_active_alias ON merge_aliases(alias_cat_id) WHERE reversed_at IS NULL;
 CREATE INDEX observations_cat ON observations(cat_id);
 CREATE INDEX reports_colony ON reports(selected_colony_id);
@@ -36,10 +38,23 @@ export function migrate(db: Db): void {
       throw new Error("Database schema is newer than this application");
     if (versions.some((v) => v.version === 1)) {
       const required: Record<string, string[]> = {
+        users: ["id", "role"],
+        colonies: ["id", "name"],
+        colony_assignments: ["user_id", "colony_id"],
         cats: ["version"],
+        reports: ["id", "actor_id", "client_request_id"],
+        media: ["id", "uploaded_by"],
+        observations: ["id", "report_id", "evidence_ids"],
         feeding_visits: ["client_request_id", "evidence"],
+        alerts: ["report_id", "level", "status", "evidence_ids"],
         review_requests: ["target_snapshot", "receipt"],
         merge_aliases: ["review_id", "snapshot", "after_version"],
+        proposal_receipts: [
+          "report_id",
+          "payload_hash",
+          "review_ids",
+          "result_json",
+        ],
       };
       for (const [table, columns] of Object.entries(required)) {
         const present = new Set(
@@ -54,6 +69,16 @@ export function migrate(db: Db): void {
             "Incompatible pre-release schema v1. Preserve non-demo data; for marked demo databases run demo-reset -- --confirm-demo-reset.",
           );
       }
+      for (const [name, sql] of Object.entries({
+        one_active_alias:
+          "SELECT 1 FROM sqlite_master WHERE type='index' AND name='one_active_alias'",
+        one_active_alert_per_report:
+          "SELECT 1 FROM sqlite_master WHERE type='index' AND name='one_active_alert_per_report'",
+      }))
+        if (!db.prepare(sql).get())
+          throw new Error(
+            `Incompatible pre-release schema v1: missing ${name}`,
+          );
     }
     if (!versions.some((v) => v.version === 1)) {
       db.exec(schemaV1);

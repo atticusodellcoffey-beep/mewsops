@@ -14,7 +14,7 @@
 | Command/check | Observed result |
 |---|---|
 | `npm run typecheck` | Passed, including test sources |
-| `npm test` | 25 tests passed across 6 files |
+| `npm test` | 29 tests passed across 7 files |
 | `npm run demo-reset -- --confirm-demo-reset` | Reset the marked synthetic local database successfully |
 | `npm run demo` | Persisted injury report, immediate alert, fixture proposal, explicit simulated staff approval and linked observation |
 | Second `npm run demo` | Reused existing report/review without duplicating approved identity or census |
@@ -22,9 +22,10 @@
 | Injected audit failure | Approval, evidence association and review decision rolled back together |
 | Distinct synthetic media-reference test | Two pending observations linked to one existing cat; census unchanged |
 | `git diff --check` | Passed |
+| `npm audit --omit=dev` | 0 production vulnerabilities reported |
 | Local database ignore check | Demo database excluded from Git |
 
-Three development agents contributed database implementation, domain implementation and adversarial review. The coordinator implemented the relational adapter, runtime validation, CLI walkthrough and integration checks. Review found and corrected scope loss, lost alert lifecycle fields, order-dependent retries, stale merge-target reversal and an incompatible pre-release schema check. The final focused reviewer pass found no remaining release-blocking defect within this backend slice; that is not a production-security claim.
+Three development agents contributed database implementation, domain implementation and adversarial review. The coordinator implemented the relational adapter, runtime validation, CLI walkthrough and integration checks. A second review cycle approved and implemented durable proposal receipts, one-active-alert semantics, explicit candidate alternatives, complete schema checks, server-session authority derivation, strict nested proposal validation, and redacted unexpected-error handling. The final focused reviewer pass found no remaining release-blocking defect within this backend slice; that is not a production-security claim.
 
 ## What this does not verify
 

@@ -45,6 +45,14 @@ export type Review = {
   targetSnapshot: Cat[];
   receipt?: { actorId: string; input: unknown; result: unknown };
 };
+export type ProposalReceipt = {
+  id: string;
+  reportId: string;
+  payloadHash: string;
+  reviewIds: string[];
+  result: unknown;
+  createdAt: string;
+};
 export type Alert = {
   id: string;
   reportId: string;
@@ -98,6 +106,7 @@ export type Entities = {
   visits: Visit;
   merges: Merge;
   audit: Audit;
+  proposalReceipts: ProposalReceipt;
 };
 /** Transaction callback must be synchronous, serializable, and roll back all writes on throw. */
 export interface DomainPort {

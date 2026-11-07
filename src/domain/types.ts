@@ -41,6 +41,7 @@ export type DecisionInput = {
   decision: "approve" | "reject";
   expectedVersion: number;
   reason: string;
+  selectedCatId?: string;
 };
 export type ReviewAction =
   | "link_observation"

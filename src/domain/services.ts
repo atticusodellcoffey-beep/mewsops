@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { isDeepStrictEqual } from "node:util";
+import { createHash } from "node:crypto";
 import { validateReportInput, validateAgentProposal } from "./validation.js";
 import type { DomainPort, Cat, Report, Review, Entities } from "./port.js";
 import {
@@ -18,6 +19,23 @@ import {
 const id = () => randomUUID();
 const now = () => new Date().toISOString();
 const same = isDeepStrictEqual;
+function canonical(value: unknown): string {
+  if (Array.isArray(value)) return `[${value.map(canonical).sort().join(",")}]`;
+  if (value && typeof value === "object")
+    return `{${Object.entries(value as Record<string, unknown>)
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([k, v]) => `${JSON.stringify(k)}:${canonical(v)}`)
+      .join(",")}}`;
+  return JSON.stringify(value);
+}
+function proposalHash(value: unknown): string {
+  return createHash("sha256").update(canonical(value)).digest("hex");
+}
+const urgencyRank: Record<string, number> = {
+  routine: 0,
+  watch: 1,
+  same_day_review: 2,
+};
 export function createDomainServices(p: DomainPort) {
   function get<K extends keyof Entities>(table: K, key: string): Entities[K] {
     return p.get(table, key) ?? fail("NOT_FOUND", `${table} not found`, 404);
@@ -87,6 +105,12 @@ export function createDomainServices(p: DomainPort) {
       );
       if (targets[0].id === targets[1].id)
         fail("VALIDATION", "Cannot merge cat into itself");
+    } else if (
+      input.action === "link_observation" &&
+      Array.isArray(change.candidates)
+    ) {
+      for (const candidate of change.candidates as Array<{ catId: unknown }>)
+        targets.push(catIn(colonyId, candidate.catId));
     } else if (input.action !== "confirm_new_cat")
       targets.push(catIn(colonyId, change.catId));
     if (
@@ -371,15 +395,24 @@ export function createDomainServices(p: DomainPort) {
         reportAccess(a, r);
         if (!r.colonyId)
           fail("VALIDATION", "Select colony before applying proposals");
+        const hash = proposalHash(proposal);
+        const priorReceipt = p
+          .all("proposalReceipts")
+          .find((x) => x.reportId === r.id);
+        if (priorReceipt) {
+          if (priorReceipt.payloadHash !== hash)
+            fail(
+              "CONFLICT",
+              "A different proposal is already recorded for this report",
+              409,
+            );
+          return priorReceipt.reviewIds.map((id) => get("reviews", id));
+        }
         if (
           p.all("observations").some((o) => o.reportId === r.id) ||
           p.all("reviews").some((o) => o.reportId === r.id)
         )
-          fail(
-            "CONFLICT",
-            "Proposal already applied; do not overwrite frozen review",
-            409,
-          );
+          fail("CONFLICT", "Proposal state exists without a receipt", 409);
         if (
           !Array.isArray(proposal.colonyCandidates) ||
           !Array.isArray(proposal.catCandidates) ||
@@ -434,33 +467,74 @@ export function createDomainServices(p: DomainPort) {
           catId: null,
         }));
         for (const o of obs) p.put("observations", o);
-        if (proposal.urgency.level !== "routine")
-          p.put("alerts", {
-            id: id(),
-            reportId: r.id,
-            colonyId: r.colonyId,
-            level: proposal.urgency.level,
-            statement: proposal.urgency.reasons.join("; "),
-            verified: false,
-            createdAt: now(),
-            status: "open",
-            evidenceIds: proposal.urgency.evidenceIds,
-          });
-        const reviews = obs.length
-          ? proposal.catCandidates.map((c) =>
-              createReviewInternal(a, {
-                reportId: r.id,
-                action: "link_observation",
-                proposedChange: {
-                  catId: c.catId,
-                  observationIds: obs.map((o) => o.id),
-                  reasons: c.reasons,
-                  contradictions: c.contradictions,
-                },
-                evidenceIds: c.evidenceIds,
-              }),
-            )
-          : [];
+        if (proposal.urgency.level !== "routine") {
+          const existingAlert = p
+            .all("alerts")
+            .find((x) => x.reportId === r.id && x.status !== "resolved");
+          if (existingAlert) {
+            const level =
+              urgencyRank[proposal.urgency.level] >
+              urgencyRank[existingAlert.level]
+                ? proposal.urgency.level
+                : existingAlert.level;
+            const reasons = [
+              existingAlert.statement,
+              ...proposal.urgency.reasons,
+            ].filter((x, i, arr) => arr.indexOf(x) === i);
+            const evidenceIds = [
+              ...new Set([
+                ...(existingAlert.evidenceIds ?? []),
+                ...proposal.urgency.evidenceIds,
+              ]),
+            ];
+            p.put("alerts", {
+              ...existingAlert,
+              level,
+              statement: reasons.join("; "),
+              evidenceIds,
+            });
+          } else
+            p.put("alerts", {
+              id: id(),
+              reportId: r.id,
+              colonyId: r.colonyId,
+              level: proposal.urgency.level,
+              statement: proposal.urgency.reasons.join("; "),
+              verified: false,
+              createdAt: now(),
+              status: "open",
+              evidenceIds: proposal.urgency.evidenceIds,
+            });
+        }
+        const reviews =
+          obs.length && proposal.catCandidates.length
+            ? [
+                createReviewInternal(a, {
+                  reportId: r.id,
+                  action: "link_observation",
+                  proposedChange: {
+                    observationIds: obs.map((o) => o.id),
+                    candidates: proposal.catCandidates.map((c) => ({
+                      catId: c.catId,
+                      reasons: c.reasons,
+                      contradictions: c.contradictions,
+                      evidenceIds: c.evidenceIds,
+                    })),
+                  },
+                  evidenceIds: proposal.catCandidates.flatMap(
+                    (c) => c.evidenceIds,
+                  ),
+                }),
+              ]
+            : [];
+        p.put("proposalReceipts", {
+          id: id(),
+          reportId: r.id,
+          payloadHash: hash,
+          reviewIds: reviews.map((x) => x.id),
+          result: reviews.map((x) => ({ id: x.id, version: x.version })),
+          createdAt: now(),
+        });
         p.put("reports", { ...r, status: "needs_review" });
         audit(a, "agent_proposal", r.id, {
           reviewIds: reviews.map((x) => x.id),
@@ -483,6 +557,24 @@ export function createDomainServices(p: DomainPort) {
       return p.transaction(() => {
         const review = get("reviews", key);
         scope(a, review.colonyId);
+        if (
+          input.decision === "approve" &&
+          review.action === "link_observation" &&
+          input.selectedCatId === undefined
+        ) {
+          const candidates = Array.isArray(review.proposedChange.candidates)
+            ? (review.proposedChange.candidates as Array<{ catId: string }>)
+            : [];
+          input = {
+            ...input,
+            selectedCatId:
+              candidates.length === 1
+                ? candidates[0].catId
+                : (review.proposedChange.catId as string | undefined),
+          };
+        }
+        if (input.decision === "reject" && review.action === "link_observation")
+          input = { ...input, selectedCatId: undefined };
         if (review.receipt) {
           if (
             review.receipt.actorId === a.id &&
@@ -502,6 +594,24 @@ export function createDomainServices(p: DomainPort) {
         )
           fail("CONFLICT", "Stale review version", 409);
         let catId: string | undefined;
+        if (input.decision === "approve") {
+          if (
+            review.action === "link_observation" &&
+            Array.isArray(review.proposedChange.candidates) &&
+            input.selectedCatId === undefined
+          )
+            fail(
+              "VALIDATION",
+              "selectedCatId is required to approve candidate link",
+            );
+        } else if (
+          review.action === "link_observation" &&
+          input.selectedCatId !== undefined
+        )
+          fail(
+            "VALIDATION",
+            "selectedCatId is only valid when approving a candidate link",
+          );
         if (input.decision === "approve") {
           for (const frozen of review.targetSnapshot) {
             const current = get("cats", frozen.id);
@@ -589,7 +699,29 @@ export function createDomainServices(p: DomainPort) {
                 version: 1,
               });
             } else {
-              const cat = catIn(review.colonyId, change.catId);
+              const selected =
+                review.action === "link_observation"
+                  ? (input.selectedCatId ?? change.catId)
+                  : change.catId;
+              if (review.action === "link_observation" && !selected)
+                fail(
+                  "VALIDATION",
+                  "selectedCatId is required to approve candidate link",
+                );
+              const candidateIds = Array.isArray(change.candidates)
+                ? change.candidates.map((c: any) => c.catId)
+                : [];
+              if (
+                review.action === "link_observation" &&
+                Array.isArray(change.candidates) &&
+                !candidateIds.includes(selected)
+              )
+                fail(
+                  "CONFLICT",
+                  "selectedCatId is not a frozen candidate",
+                  409,
+                );
+              const cat = catIn(review.colonyId, selected);
               if (
                 !cat.confirmed ||
                 cat.canonicalId ||

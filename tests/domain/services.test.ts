@@ -80,6 +80,7 @@ const approval = {
   decision: "approve" as const,
   expectedVersion: 1,
   reason: "Staff compared evidence",
+  selectedCatId: "cat-1",
 };
 function merge() {
   const r = report();

@@ -12,6 +12,7 @@ const tableNames = {
   visits: "feeding_visits",
   merges: "merge_aliases",
   audit: "audit_events",
+  proposalReceipts: "proposal_receipts",
 } as const;
 
 /** Internal relational adapter. Services own authorization; no parallel JSON store. */
@@ -184,6 +185,25 @@ export function createSqlitePort(db: Db): DomainPort {
         };
         break;
       }
+      case "proposalReceipts": {
+        const r = raw as {
+          id: string;
+          report_id: string;
+          payload_hash: string;
+          review_ids: string;
+          result_json: string;
+          created_at: string;
+        };
+        result = {
+          id: r.id,
+          reportId: r.report_id,
+          payloadHash: r.payload_hash,
+          reviewIds: JSON.parse(r.review_ids),
+          result: JSON.parse(r.result_json),
+          createdAt: r.created_at,
+        };
+        break;
+      }
     }
     return result as Entities[K];
   }
@@ -342,10 +362,17 @@ export function createSqlitePort(db: Db): DomainPort {
         }
         case "alerts": {
           const r = value as Entities["alerts"];
-          if (exists)
-            throw new Error(
-              "Reported concerns are append-only in this service slice",
+          if (exists) {
+            db.prepare(
+              "UPDATE alerts SET level=?, reasons=?, evidence_ids=? WHERE id=?",
+            ).run(
+              r.level,
+              json([r.statement]),
+              json(r.evidenceIds ?? [r.reportId]),
+              r.id,
             );
+            break;
+          }
           insert("alerts", {
             id: r.id,
             report_id: r.reportId,
@@ -414,6 +441,19 @@ export function createSqlitePort(db: Db): DomainPort {
             after_json: json(r.detail ?? null),
             reason: r.action,
             created_at: r.at,
+          });
+          break;
+        }
+        case "proposalReceipts": {
+          const r = value as Entities["proposalReceipts"];
+          if (exists) throw new Error("Proposal receipt already exists");
+          insert("proposal_receipts", {
+            id: r.id,
+            report_id: r.reportId,
+            payload_hash: r.payloadHash,
+            review_ids: json(r.reviewIds),
+            result_json: json(r.result),
+            created_at: r.createdAt,
           });
           break;
         }

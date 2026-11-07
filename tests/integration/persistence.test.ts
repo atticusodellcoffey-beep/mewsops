@@ -77,6 +77,7 @@ describe("persisted backend integration", () => {
       decision: "approve" as const,
       expectedVersion: review.version,
       reason: "Synthetic staff confirmation.",
+      selectedCatId: catId,
     };
     const receipt = services.decideReview(staff, review.id, decision);
     const auditCount = (
@@ -188,6 +189,7 @@ describe("persisted backend integration", () => {
       expectedVersion: review.version,
       reason:
         "Synthetic identity test: staff confirms both observations as Pebble.",
+      selectedCatId: "cat-1",
     });
     expect(services.getColonySummary(staff, "colony-1").confirmedCats).toBe(
       before.confirmedCats,
@@ -200,5 +202,77 @@ describe("persisted backend integration", () => {
     expect(
       services.getColonySummary(staff, "colony-1").pendingObservations,
     ).toBe(0);
+  });
+
+  it("returns the same proposal reviews after restart and keeps one active alert", () => {
+    const input = demoReport(colonyId, "proposal-retry");
+    services.submitReport(volunteer, input);
+    const report = db
+      .prepare(
+        "SELECT id FROM reports WHERE actor_id=? AND client_request_id=?",
+      )
+      .get(volunteer.id, input.clientRequestId) as { id: string };
+    const proposal = demoProposal(report.id, colonyId, catId, [report.id]);
+    const first = services.applyAgentProposal(staff, proposal);
+    expect(
+      db
+        .prepare(
+          "SELECT count(*) AS n FROM alerts WHERE report_id=? AND status='open'",
+        )
+        .get(report.id),
+    ).toEqual({ n: 1 });
+    db.close();
+    db = createDatabase(join(directory, "demo.db"));
+    migrate(db);
+    services = createServices(db);
+    const second = services.applyAgentProposal(staff, proposal);
+    expect(second.map((x) => x.id)).toEqual(first.map((x) => x.id));
+    expect(
+      db
+        .prepare(
+          "SELECT count(*) AS n FROM proposal_receipts WHERE report_id=?",
+        )
+        .get(report.id),
+    ).toEqual({ n: 1 });
+    expect(
+      db
+        .prepare(
+          "SELECT count(*) AS n FROM alerts WHERE report_id=? AND status='open'",
+        )
+        .get(report.id),
+    ).toEqual({ n: 1 });
+  });
+
+  it("creates one alternative review for two candidates and requires the selected candidate", () => {
+    const input = demoReport(colonyId, "two-candidates");
+    services.submitReport(volunteer, input);
+    const report = db
+      .prepare(
+        "SELECT id FROM reports WHERE actor_id=? AND client_request_id=?",
+      )
+      .get(volunteer.id, input.clientRequestId) as { id: string };
+    const proposal = demoProposal(report.id, colonyId, catId, [report.id]);
+    proposal.catCandidates.push({
+      catId: catId === "cat-5" ? "cat-6" : "cat-5",
+      evidenceIds: [report.id],
+      reasons: ["Second synthetic candidate"],
+      contradictions: [],
+    });
+    const reviews = services.applyAgentProposal(staff, proposal);
+    expect(reviews).toHaveLength(1);
+    expect(() =>
+      services.decideReview(staff, reviews[0].id, {
+        decision: "approve",
+        expectedVersion: 1,
+        reason: "Choose candidate",
+      }),
+    ).toThrow();
+    const result = services.decideReview(staff, reviews[0].id, {
+      decision: "approve",
+      expectedVersion: 1,
+      reason: "Choose candidate",
+      selectedCatId: proposal.catCandidates[1].catId,
+    });
+    expect(result.status).toBe("approved");
   });
 });
