@@ -116,6 +116,12 @@ test("assigned colony and own raw report access, no volunteer cat-history eviden
     /demo-only-location|Reporter|user-/,
   );
 });
+test("volunteer cannot manufacture an agent proposal", () => {
+  const r = report("forged-agent");
+  expect(() => s.applyAgentProposal(vol, proposal(r.id))).toThrow();
+  expect(db.prepare("SELECT count(*) n FROM observations WHERE report_id=?").get(r.id)).toEqual({ n: 0 });
+  expect(db.prepare("SELECT count(*) n FROM proposal_receipts WHERE report_id=?").get(r.id)).toEqual({ n: 0 });
+});
 test("volunteer cannot decide; stale versions, changed inputs and cross-user retries conflict", () => {
   const rev = review();
   expect(() => s.decideReview(vol, rev.id, approval)).toThrow();

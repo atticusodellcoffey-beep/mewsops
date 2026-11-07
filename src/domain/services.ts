@@ -388,7 +388,10 @@ export function createDomainServices(p: DomainPort) {
       return p.transaction(() => createReviewInternal(a, input));
     },
     applyAgentProposal(a: Actor, proposal: AgentProposal): Review[] {
-      actorValid(a);
+      // This method is an internal orchestration seam until the HTTP/API
+      // layer exists. Never allow a volunteer/client to manufacture model
+      // output that becomes durable observations, alerts, or reviews.
+      staff(a);
       proposal = validateAgentProposal(proposal);
       return p.transaction(() => {
         const r = get("reports", proposal.reportId);

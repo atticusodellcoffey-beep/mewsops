@@ -70,11 +70,15 @@ export function resetDemo(args: string[]): void {
       if (tables.some((t) => !allowed.has(t.name)))
         throw new Error("Unexpected tables; refusing demo reset");
       for (const t of tables) db.exec(`DROP TABLE "${t.name}"`);
-      migrate(db);
-      seedDemo(db);
-      if ((db.pragma("foreign_key_check") as unknown[]).length)
-        throw new Error("Reset foreign key check failed");
     }).immediate();
+    // SQLite cannot toggle foreign_keys inside an active transaction. The
+    // destructive, marker-guarded drop commits first; schema creation then
+    // runs with enforcement enabled and migration fails closed.
+    db.pragma("foreign_keys = ON");
+    migrate(db);
+    seedDemo(db);
+    if ((db.pragma("foreign_key_check") as unknown[]).length)
+      throw new Error("Reset foreign key check failed");
   } finally {
     db.pragma("foreign_keys = ON");
     db.close();

@@ -27,6 +27,33 @@ CREATE TRIGGER no_audit_update BEFORE UPDATE ON audit_events BEGIN SELECT RAISE(
 CREATE TRIGGER no_audit_delete BEFORE DELETE ON audit_events BEGIN SELECT RAISE(ABORT,'Audit events are append only'); END;
 `;
 export function migrate(db: Db): void {
+  const verifyIntegrity = () => {
+    if (db.pragma("foreign_keys", { simple: true }) !== 1)
+      throw new Error("Database integrity failure: foreign keys are disabled");
+    const requiredTriggers: Record<string, string[]> = {
+      immutable_report_evidence: ["BEFORE UPDATE OF", "reports", "RAISE(ABORT"],
+      immutable_observation_evidence: ["BEFORE UPDATE OF", "observations", "RAISE(ABORT"],
+      immutable_review_proposal: ["BEFORE UPDATE OF", "review_requests", "RAISE(ABORT"],
+      no_audit_update: ["BEFORE UPDATE", "audit_events", "RAISE(ABORT"],
+      no_audit_delete: ["BEFORE DELETE", "audit_events", "RAISE(ABORT"],
+    };
+    for (const [name, fragments] of Object.entries(requiredTriggers)) {
+      const row = db.prepare("SELECT sql FROM sqlite_master WHERE type='trigger' AND name=?").get(name) as { sql: string } | undefined;
+      if (!row || fragments.some((fragment) => !row.sql.toUpperCase().includes(fragment.toUpperCase())))
+        throw new Error(`Incompatible schema: missing or altered trigger ${name}`);
+    }
+    const requiredIndexes: Record<string, string> = {
+      one_active_alias: "WHERE reversed_at IS NULL",
+      one_active_alert_per_report: "WHERE status='open'",
+    };
+    for (const [name, predicate] of Object.entries(requiredIndexes)) {
+      const row = db.prepare("SELECT sql FROM sqlite_master WHERE type='index' AND name=?").get(name) as { sql: string } | undefined;
+      if (!row || !row.sql.replace(/\\s+/g, "").toUpperCase().includes(predicate.replace(/\\s+/g, "").toUpperCase()))
+        throw new Error(`Incompatible schema: missing or altered index ${name}`);
+    }
+    const integrity = db.prepare("PRAGMA integrity_check").get() as { integrity_check: string };
+    if (integrity.integrity_check !== "ok") throw new Error("Database integrity check failed");
+  };
   db.transaction(() => {
     db.exec(
       "CREATE TABLE IF NOT EXISTS schema_migrations (version INTEGER PRIMARY KEY, applied_at TEXT NOT NULL)",
@@ -87,5 +114,6 @@ export function migrate(db: Db): void {
         "2026-11-07T00:00:00.000Z",
       );
     }
+    verifyIntegrity();
   }).immediate();
 }
