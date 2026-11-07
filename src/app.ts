@@ -12,6 +12,7 @@ import {
 } from "./db/index.js";
 import { createServices, staff, fail } from "./domain/index.js";
 import { actorFromVerifiedSession } from "./api/session.js";
+import { demoAnalyzer, readDemoDescriptions } from "./api/demo-runtime.js";
 import { errorEnvelope } from "./api/errors.js";
 import {
   DecisionInputSchema,
@@ -56,6 +57,7 @@ export interface ApiOptions {
   analyzeReport?: AnalyzeReport;
   timeoutMs?: number;
   vettedDemoDescriptions?: ReadonlyMap<string, string>;
+  logRequest?: (event: { requestId: string; status: number }) => void;
   verifiedSubject?: (
     req: IncomingMessage,
   ) => Promise<{ userId: string } | undefined>;
@@ -80,6 +82,9 @@ export function createApiServer(options: ApiOptions) {
   }
   return createServer(async (req, res) => {
     const requestId = randomUUID();
+    res.once("finish", () =>
+      options.logRequest?.({ requestId, status: res.statusCode }),
+    );
     res.setHeader("Cache-Control", "no-store");
     res.setHeader("X-Content-Type-Options", "nosniff");
     res.setHeader("Content-Type", "application/json");
@@ -202,6 +207,14 @@ export function createApiServer(options: ApiOptions) {
           await bytes(req, 0);
           return send(project(await processReport(actor, id)));
         }
+        if (resource === "alerts" && id && action === "resolve") {
+          staff(actor);
+          const { reason } = z
+            .object({ reason: z.string().trim().min(1).max(2000) })
+            .strict()
+            .parse(await json(req));
+          return send(services.resolveAlert(actor, id, reason));
+        }
         if (resource === "reviews" && id && action === "decision") {
           staff(actor);
           return send(
@@ -250,6 +263,8 @@ if (
 ) {
   if (process.env.MEWSOPS_DEMO !== "1")
     throw new Error("Set MEWSOPS_DEMO=1 for local synthetic startup");
+  const analyzeReport = await demoAnalyzer(process.env.MEWSOPS_ANALYSIS);
+  const vettedDemoDescriptions = await readDemoDescriptions();
   const db = createDatabase(DEMO_DATABASE_PATH);
   migrate(db);
   seedDemo(db);
@@ -257,7 +272,9 @@ if (
     db,
     uploadDir: resolve("storage/uploads"),
     demo: true,
-    analyzeReport: syntheticFixture,
+    analyzeReport,
+    vettedDemoDescriptions,
+    logRequest: (event) => console.info(JSON.stringify(event)),
   }).listen(3000, "127.0.0.1", () =>
     console.log("Synthetic API at http://127.0.0.1:3000"),
   );

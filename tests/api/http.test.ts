@@ -141,6 +141,7 @@ it("keeps urgent evidence through timeout and invalid agent output, then retries
   const {
     data: { id },
   } = await (await req("/reports", staff, input)).json();
+  let alertId: string | undefined;
   for (let n = 0; n < 2; n++) {
     const failed = await req(
       "/reports/" + id + "/process",
@@ -152,10 +153,20 @@ it("keeps urgent evidence through timeout and invalid agent output, then retries
     const { data } = await (await req("/reports/" + id, staff)).json();
     expect(data.status).toBe("failed");
     expect(data.observations).toHaveLength(0);
+    alertId = data.alerts[0].id;
     expect(data.alerts.map((a: { level: string }) => a.level)).toEqual([
       "same_day_review",
     ]);
   }
+  const path = "/alerts/" + alertId + "/resolve";
+  const resolution = {
+    reason: "Staff reviewed the saved report during outage",
+  };
+  expect((await req(path, await login("volunteer"), resolution)).status).toBe(
+    403,
+  );
+  expect((await req(path, staff, resolution)).status).toBe(200);
+  expect((await req(path, staff, resolution)).status).toBe(409);
   expect(
     (await req("/reports/" + id + "/process", staff, undefined, "POST")).status,
   ).toBe(200);
@@ -240,4 +251,80 @@ it("disables persona switching outside demo mode", async () => {
   expect((await req("/demo/session", "", { persona: "staff" })).status).toBe(
     403,
   );
+});
+
+it("links two different uploaded images to one counted cat after staff approval", async () => {
+  // Solid-color test images exercise storage and identity review. The analyzer is scripted.
+  const { req, url, login } = await app(
+    async (report, deps) => {
+      const proposal = (await syntheticFixture(report, deps)) as object;
+      expect(new Set(report.images.map((image) => image.dataBase64)).size).toBe(
+        2,
+      );
+      const evidenceIds = report.images.map((image) => image.evidenceId);
+      return {
+        ...proposal,
+        catCandidates: [
+          {
+            catId: "cat-1",
+            reasons: ["Scripted fixture match"],
+            contradictions: [],
+            evidenceIds,
+          },
+        ],
+        observations: evidenceIds.map((evidenceId) => ({
+          kind: "appearance",
+          source: "visual",
+          statement: "Scripted synthetic view",
+          evidenceIds: [evidenceId],
+        })),
+      };
+    },
+    true,
+    new Map([["cat-1", "Test-only synthetic description"]]),
+  );
+  const volunteer = await login("volunteer"),
+    staff = await login("staff");
+  const count = async () =>
+    (await (await req("/summary", staff)).json()).data.confirmedCats;
+  const before = await count();
+  const mediaIds: string[] = [];
+  for (const data of [
+    "iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAIAAAD91JpzAAAACXBIWXMAAAPoAAAD6AG1e1JrAAAADklEQVR4nGNwAQMGCAUAFl4DMWOGoScAAAAASUVORK5CYII=",
+    "iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAIAAAD91JpzAAAACXBIWXMAAAPoAAAD6AG1e1JrAAAADklEQVR4nGM4AwYMEAoAQv4JkcTmPrwAAAAASUVORK5CYII=",
+  ]) {
+    const upload = await fetch(url + "/media", {
+      method: "POST",
+      headers: { cookie: volunteer, "content-type": "image/png" },
+      body: new Uint8Array(Buffer.from(data, "base64")),
+    });
+    expect(upload.status).toBe(201);
+    mediaIds.push((await upload.json()).data.id);
+  }
+  const { data: report } = await (
+    await req("/reports", volunteer, { ...input, mediaIds })
+  ).json();
+  const path = "/reports/" + report.id;
+  const { data: processed } = await (
+    await req(path + "/process", staff, undefined, "POST")
+  ).json();
+  expect(
+    processed.observations.map((o: { catId: string | null }) => o.catId),
+  ).toEqual([null, null]);
+  expect(processed.reviews).toHaveLength(1);
+  const [review] = processed.reviews;
+  expect(
+    (
+      await req("/reviews/" + review.id + "/decision", staff, {
+        decision: "approve",
+        expectedVersion: review.version,
+        reason: "Staff compared both synthetic views",
+      })
+    ).status,
+  ).toBe(200);
+  const { data: confirmed } = await (await req(path, staff)).json();
+  expect(confirmed.observations.map((o: { catId: string }) => o.catId)).toEqual(
+    ["cat-1", "cat-1"],
+  );
+  expect(await count()).toBe(before);
 });

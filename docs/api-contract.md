@@ -18,6 +18,7 @@ Use opaque IDs, UTC timestamps, same-origin requests and a session cookie. JSON 
 | GET /api/reviews               | Staff only. Returns frozen proposed changes with evidence IDs and versions.                                                                                       |
 | POST /api/reviews/:id/decision | Staff only. DecisionInput. Returns reviewId, status, version and optional catId.                                                                                  |
 | GET /api/alerts                | Open alerts. Volunteers see only their reports in currently assigned colonies.                                                                                    |
+| POST /api/alerts/:id/resolve   | Staff only. Send `{"reason":"Reviewed original report"}` after manual triage. Returns alertId and resolved status. A repeat returns 409.                          |
 | GET /api/summary               | Staff aggregate census, fixed, TNR needed/unknown, vet review and pending counts.                                                                                 |
 
 ## Synthetic frontend examples
