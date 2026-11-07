@@ -55,6 +55,7 @@ export interface ApiOptions {
   demo?: boolean;
   analyzeReport?: AnalyzeReport;
   timeoutMs?: number;
+  vettedDemoDescriptions?: ReadonlyMap<string, string>;
   verifiedSubject?: (
     req: IncomingMessage,
   ) => Promise<{ userId: string } | undefined>;
@@ -67,6 +68,8 @@ export function createApiServer(options: ApiOptions) {
     services,
     options.analyzeReport,
     options.timeoutMs ?? 15000,
+    uploadDir,
+    options.demo ? options.vettedDemoDescriptions : undefined,
   );
   const sessions = new Map<string, { userId: string; expires: number }>();
   function project(report: ReturnType<typeof services.getReport>) {

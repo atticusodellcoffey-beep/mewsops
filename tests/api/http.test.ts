@@ -14,7 +14,11 @@ const cleanups: (() => Promise<void>)[] = [];
 afterEach(async () => {
   for (const fn of cleanups.splice(0)) await fn();
 });
-async function app(analyze: AnalyzeReport = syntheticFixture, demo = true) {
+async function app(
+  analyze: AnalyzeReport = syntheticFixture,
+  demo = true,
+  vettedDemoDescriptions?: ReadonlyMap<string, string>,
+) {
   const dir = await mkdtemp(join(tmpdir(), "mewsops-http-"));
   const db = createDatabase(join(dir, "test.db"));
   migrate(db);
@@ -24,7 +28,8 @@ async function app(analyze: AnalyzeReport = syntheticFixture, demo = true) {
     uploadDir: dir,
     demo,
     analyzeReport: analyze,
-    timeoutMs: 40,
+    vettedDemoDescriptions,
+    timeoutMs: 150,
   });
   await new Promise<void>((done) => server.listen(0, "127.0.0.1", done));
   cleanups.push(async () => {
@@ -59,7 +64,17 @@ const input = {
   mediaIds: [],
 };
 it("takes a persisted volunteer report through scoped staff review and idempotent approval", async () => {
-  const { req, login } = await app();
+  const { req, login } = await app(async (input, deps) => ({
+    ...((await syntheticFixture(input, deps)) as object),
+    catCandidates: [
+      {
+        catId: "cat-1",
+        evidenceIds: [input.textEvidenceId],
+        reasons: ["Scripted approval test"],
+        contradictions: [],
+      },
+    ],
+  }));
   const volunteer = await login("volunteer"),
     staff = await login("staff");
   expect((await req("/reviews")).status).toBe(401);
@@ -146,7 +161,18 @@ it("keeps urgent evidence through timeout and invalid agent output, then retries
   ).toBe(200);
 });
 it("validates uploads and enforces owner and current assignment on private reads", async () => {
-  const { req, url, login, db } = await app();
+  let captured: Parameters<AnalyzeReport>[0] | undefined;
+  const { req, url, login, db } = await app(
+    async (input, deps) => {
+      captured = input;
+      return syntheticFixture(input, deps);
+    },
+    true,
+    new Map([
+      ["cat-1", "Test-only synthetic markings"],
+      ["cat-5", "Other colony"],
+    ]),
+  );
   const cookie = await login("volunteer"),
     staff = await login("staff");
   const upload = (body: Buffer, contentType = "image/png") =>
@@ -178,7 +204,33 @@ it("validates uploads and enforces owner and current assignment on private reads
   expect((await req(privatePath, cookie)).headers.get("content-type")).toBe(
     "image/png",
   );
-  await req("/reports", cookie, { ...input, mediaIds: [id] });
+  const { data: report } = await (
+    await req("/reports", cookie, { ...input, mediaIds: [id] })
+  ).json();
+  const { data: processed } = await (
+    await req("/reports/" + report.id + "/process", staff, undefined, "POST")
+  ).json();
+  expect(processed.reviews).toEqual([]);
+  expect(captured?.textEvidenceId).toBe(report.id);
+  expect(captured?.images[0]).toEqual({
+    evidenceId: id,
+    mimeType: "image/png",
+    dataBase64: Buffer.from(
+      await (await req(privatePath, staff)).arrayBuffer(),
+    ).toString("base64"),
+  });
+  expect(captured?.context.catCandidates).toContainEqual({
+    catId: "cat-1",
+    colonyId: "colony-1",
+    knownDescription: "Test-only synthetic markings",
+  });
+  expect(captured?.context.catCandidates).toContainEqual({
+    catId: "cat-2",
+    colonyId: "colony-1",
+  });
+  expect(
+    captured?.context.catCandidates.every((cat) => cat.colonyId === "colony-1"),
+  ).toBe(true);
   db.prepare("DELETE FROM colony_assignments WHERE user_id=?").run("user-3");
   expect((await req(privatePath, cookie)).status).toBe(403);
   expect((await req(privatePath, staff)).status).toBe(200);

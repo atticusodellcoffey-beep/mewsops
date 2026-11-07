@@ -63,3 +63,4 @@ export type Review = z.infer<typeof ReviewSchema>;
 export type Envelope<T> =
   | { data: T }
   | { error: { code: string; message: string; requestId: string } };
+export type { AnalyzeReportInput } from "./agent.js";

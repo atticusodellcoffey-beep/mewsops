@@ -33,7 +33,7 @@ Start a volunteer session with `{"persona":"volunteer"}`. Submit this JSON to /a
 }
 ```
 
-For photos, upload first and include the returned IDs. Optional report fields are demoLocationId and observedAt. The original report text and immediate unverified alert survive processing failures. Switch to the staff persona in a separate browser profile, list reports, then POST the process command for the returned ID. The local fixture for colony-1 proposes cat-1 for human review. It does not inspect the image. A staff decision on the returned review looks like:
+For photos, upload first and include the returned IDs. Optional report fields are demoLocationId and observedAt. The original report text and immediate unverified alert survive processing failures. Switch to the staff persona in a separate browser profile, list reports, then POST the process command for the returned ID. The default fixture leaves cat identity unresolved. When the agent supplies a candidate and the backend creates a review, a staff decision looks like:
 
 ```json
 {

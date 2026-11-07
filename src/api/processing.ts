@@ -9,42 +9,29 @@ import {
 } from "../domain/index.js";
 import { AgentProposalSchema } from "../contracts/index.js";
 
+import type { AnalyzeReportInput } from "../contracts/agent.js";
+import { prepareAnalysis, proposalGuard } from "./agent-context.js";
 type Services = ReturnType<typeof createServices>;
-type Report = ReturnType<Services["getReport"]>;
-export type AnalysisInput = Pick<
-  Report,
-  "id" | "text" | "colonyId" | "mediaIds"
->;
 export type AnalyzeReport = (
-  report: AnalysisInput,
-  signal: AbortSignal,
+  report: AnalyzeReportInput,
+  dependencies: { signal: AbortSignal },
 ) => Promise<unknown>;
 
 export const syntheticFixture: AnalyzeReport = async (
   report,
 ): Promise<AgentProposal> => ({
-  reportId: report.id,
+  reportId: report.reportId,
   colonyCandidates: [],
-  catCandidates:
-    report.colonyId === "colony-1"
-      ? [
-          {
-            catId: "cat-1",
-            evidenceIds: [report.id],
-            reasons: ["Synthetic walkthrough candidate"],
-            contradictions: [],
-          },
-        ]
-      : [],
+  catCandidates: [],
   observations: [
     {
       kind: "statement",
       statement: report.text,
       source: "reporter",
-      evidenceIds: [report.id],
+      evidenceIds: [report.reportId],
     },
   ],
-  urgency: { level: "routine", reasons: [], evidenceIds: [report.id] },
+  urgency: { level: "routine", reasons: [], evidenceIds: [report.reportId] },
   uncertainties: ["Synthetic fixture. Identity requires staff review."],
 });
 
@@ -53,6 +40,8 @@ export function processor(
   services: Services,
   analyze: AnalyzeReport | undefined,
   timeout: number,
+  uploadDir: string,
+  descriptions?: ReadonlyMap<string, string>,
 ) {
   const active = new Set<string>();
   return async (actor: Actor, id: string) => {
@@ -71,20 +60,28 @@ export function processor(
     const controller = new AbortController();
     let timer: ReturnType<typeof setTimeout> | undefined;
     try {
+      const input = await prepareAnalysis(
+        db,
+        uploadDir,
+        actor,
+        report,
+        descriptions,
+      );
+      const validate = proposalGuard(input);
       const deadline = new Promise<never>((_, reject) => {
         timer = setTimeout(() => {
           controller.abort();
           reject(new Error("timeout"));
         }, timeout);
       });
-      const { text, colonyId, mediaIds } = report;
+
       const output = AgentProposalSchema.parse(
         await Promise.race([
           deadline,
-          analyze({ id, text, colonyId, mediaIds }, controller.signal),
+          analyze(input, { signal: controller.signal }),
         ]),
       );
-      if (output.reportId !== id) throw new Error("Wrong report");
+      validate(output);
       const currentActor = actorFromVerifiedSession(db, { userId: actor.id });
       services.applyAgentProposal(currentActor, output);
       return services.getReport(actor, id);
