@@ -713,10 +713,9 @@ export function createDomainServices(p: DomainPort) {
                 );
               const candidateIds = Array.isArray(change.candidates)
                 ? change.candidates.map((c: any) => c.catId)
-                : [];
+                : [change.catId];
               if (
                 review.action === "link_observation" &&
-                Array.isArray(change.candidates) &&
                 !candidateIds.includes(selected)
               )
                 fail(
@@ -724,6 +723,8 @@ export function createDomainServices(p: DomainPort) {
                   "selectedCatId is not a frozen candidate",
                   409,
                 );
+              if (review.action === "link_observation" && !review.targetSnapshot.some(snapshot => snapshot.id === selected))
+                fail("CONFLICT", "Selected cat has no frozen snapshot", 409);
               const cat = catIn(review.colonyId, selected);
               if (
                 !cat.confirmed ||

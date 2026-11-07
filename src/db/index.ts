@@ -14,6 +14,7 @@ export function createDatabase(path: string): Database.Database {
     mkdirSync(dirname(path), { recursive: true });
   const db = new Database(path);
   db.pragma("foreign_keys = ON");
+  db.pragma("recursive_triggers = ON");
   db.pragma("busy_timeout = 5000");
   return db;
 }

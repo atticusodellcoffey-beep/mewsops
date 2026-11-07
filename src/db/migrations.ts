@@ -1,4 +1,5 @@
 import type { Db } from "./types.js";
+import Database from "better-sqlite3";
 export const schemaV1 = `
 CREATE TABLE users (id TEXT PRIMARY KEY, name TEXT NOT NULL, role TEXT NOT NULL CHECK(role IN ('staff','volunteer')), available INTEGER NOT NULL DEFAULT 1 CHECK(available IN (0,1)));
 CREATE TABLE colonies (id TEXT PRIMARY KEY, name TEXT NOT NULL, location_label TEXT NOT NULL, exact_location TEXT);
@@ -30,6 +31,34 @@ export function migrate(db: Db): void {
   const verifyIntegrity = () => {
     if (db.pragma("foreign_keys", { simple: true }) !== 1)
       throw new Error("Database integrity failure: foreign keys are disabled");
+    if (db.pragma("recursive_triggers", { simple: true }) !== 1)
+      throw new Error("Database integrity failure: recursive triggers are disabled");
+    // Compare actual definitions to a fresh database created by this version.
+    // Checking names or fragments alone can accept disabled triggers or non-unique indexes.
+    const expected = new Database(":memory:");
+    try {
+      expected.exec(schemaV1);
+      expected.exec("CREATE TABLE IF NOT EXISTS schema_migrations (version INTEGER PRIMARY KEY, applied_at TEXT NOT NULL)");
+      if (db.prepare("SELECT 1 FROM sqlite_master WHERE type='table' AND name='demo_seed'").get())
+        expected.exec("CREATE TABLE IF NOT EXISTS demo_seed (id TEXT PRIMARY KEY)");
+      const objects = expected.prepare("SELECT type,name,sql FROM sqlite_master WHERE sql IS NOT NULL AND name NOT LIKE 'sqlite_%'").all() as {type:string;name:string;sql:string}[];
+      const getActual = db.prepare("SELECT sql FROM sqlite_master WHERE type=? AND name=?");
+      for (const object of objects) {
+        const actual = getActual.get(object.type, object.name) as {sql:string}|undefined;
+        if (!actual || actual.sql !== object.sql)
+          throw new Error(`Incompatible schema: missing or altered ${object.type} ${object.name}`);
+      }
+      const expectedNames = new Set(objects.map(object => `${object.type}:${object.name}`));
+      const expectedTables = new Set(objects.filter(object => object.type === "table").map(object => object.name));
+      const actualAux = db.prepare("SELECT type,name,tbl_name FROM sqlite_master WHERE type IN ('trigger','index') AND sql IS NOT NULL").all() as {type:string;name:string;tbl_name:string}[];
+      for (const object of actualAux) if (expectedTables.has(object.tbl_name) && !expectedNames.has(`${object.type}:${object.name}`))
+        throw new Error(`Incompatible schema: unexpected ${object.type} ${object.name}`);
+      const temporary = db.prepare("SELECT type,name,tbl_name FROM sqlite_temp_master WHERE type IN ('trigger','index')").all() as {type:string;name:string;tbl_name:string}[];
+      for (const object of temporary) if (expectedTables.has(object.tbl_name))
+        throw new Error(`Incompatible schema: unexpected temporary ${object.type} ${object.name}`);
+    } finally { expected.close(); }
+    if ((db.pragma("foreign_key_check") as unknown[]).length)
+      throw new Error("Database integrity failure: foreign-key violations");
     const requiredTriggers: Record<string, string[]> = {
       immutable_report_evidence: ["BEFORE UPDATE OF", "reports", "RAISE(ABORT"],
       immutable_observation_evidence: ["BEFORE UPDATE OF", "observations", "RAISE(ABORT"],

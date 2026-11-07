@@ -25,7 +25,7 @@
 | `npm audit --omit=dev` | 0 production vulnerabilities reported |
 | Local database ignore check | Demo database excluded from Git |
 
-Three development agents contributed database implementation, domain implementation and adversarial review. The coordinator implemented the relational adapter, runtime validation, CLI walkthrough and integration checks. A second review cycle approved and implemented durable proposal receipts, one-active-alert semantics, explicit candidate alternatives, complete schema checks, server-session authority derivation, strict nested proposal validation, and redacted unexpected-error handling. The final focused reviewer pass found no remaining release-blocking defect within this backend slice; that is not a production-security claim.
+Three development agents contributed database implementation, domain implementation and adversarial review. Subsequent review found gaps in an earlier claim of complete schema checks and a verified session boundary. Schema checks are now stronger but depend on connection settings and a version-specific SQL reference. The session helper assumes its input is already verified; it does not verify sessions. See [security research and implementation workplan](security-research-workplan.md) for current findings, tests and release blockers.
 
 ## What this does not verify
 
