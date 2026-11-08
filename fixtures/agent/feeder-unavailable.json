@@ -1,0 +1,50 @@
+{
+  "id": "feeder-unavailable-01",
+  "mode": "fixture",
+  "synthetic": true,
+  "provenance": "Hand-authored synthetic evaluation target based on seeded report-3; not a recorded model run.",
+  "input": {
+    "reportId": "report-3",
+    "text": "Feeder unavailable today. No recent feeding recorded; this is not proof no one fed.",
+    "textEvidenceId": "report-3",
+    "observedAt": "2026-11-07T11:00:00.000Z",
+    "images": [],
+    "context": {
+      "colonyCandidates": [
+        {
+          "colonyId": "colony-3",
+          "name": "Banyan Cove"
+        }
+      ],
+      "catCandidates": []
+    }
+  },
+  "expectedProposal": {
+    "reportId": "report-3",
+    "colonyCandidates": [
+      {
+        "colonyId": "colony-3",
+        "evidenceIds": ["report-3"],
+        "reasons": ["The server supplied Banyan Cove as the selected colony for this report."]
+      }
+    ],
+    "catCandidates": [],
+    "observations": [
+      {
+        "kind": "feeder_availability",
+        "statement": "The volunteer reports that the feeder was unavailable today.",
+        "source": "reporter",
+        "evidenceIds": ["report-3"]
+      }
+    ],
+    "urgency": {
+      "level": "same_day_review",
+      "reasons": ["Feeder unavailable; feeding coverage needs review."],
+      "evidenceIds": ["report-3"]
+    },
+    "uncertainties": [
+      "No recent feeding recorded is not proof that nobody fed the colony.",
+      "This report does not confirm a feeding visit or update the confirmed last-feeding time."
+    ]
+  }
+}

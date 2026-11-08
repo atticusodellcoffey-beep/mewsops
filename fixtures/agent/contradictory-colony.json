@@ -1,0 +1,25 @@
+{
+  "id": "contradictory-colony-10",
+  "mode": "fixture",
+  "synthetic": true,
+  "provenance": "Hand-authored synthetic evaluation target; only colony-1 is supplied as an allowed candidate.",
+  "evaluationStatus": "deterministic_scope_case",
+  "input": {
+    "reportId": "eval-report-contradictory-colony-10",
+    "text": "This might be a cat from a different colony, perhaps an unsupplied colony-99.",
+    "textEvidenceId": "eval-report-contradictory-colony-10",
+    "images": [],
+    "context": {
+      "colonyCandidates": [{ "colonyId": "colony-1", "name": "Mangrove Lantern" }],
+      "catCandidates": []
+    }
+  },
+  "expectedProposal": {
+    "reportId": "eval-report-contradictory-colony-10",
+    "colonyCandidates": [],
+    "catCandidates": [],
+    "observations": [{ "kind": "colony_claim", "statement": "The reporter speculates that the cat may belong to another colony.", "source": "reporter", "evidenceIds": ["eval-report-contradictory-colony-10"] }],
+    "urgency": { "level": "routine", "reasons": [], "evidenceIds": ["eval-report-contradictory-colony-10"] },
+    "uncertainties": ["The report mentions an unsupplied colony; the agent must not introduce it as a candidate."]
+  }
+}

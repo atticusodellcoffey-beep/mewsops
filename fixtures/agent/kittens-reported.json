@@ -1,0 +1,50 @@
+{
+  "id": "kittens-reported-01",
+  "mode": "fixture",
+  "synthetic": true,
+  "provenance": "Hand-authored synthetic evaluation target; not a recorded model run.",
+  "input": {
+    "reportId": "eval-report-kittens-reported-01",
+    "text": "At Mangrove Lantern, I saw three small kittens under the storage shed. I could not tell whether their mother was nearby.",
+    "textEvidenceId": "eval-report-kittens-reported-01",
+    "observedAt": "2026-11-07T11:15:00.000Z",
+    "images": [],
+    "context": {
+      "colonyCandidates": [
+        {
+          "colonyId": "colony-1",
+          "name": "Mangrove Lantern"
+        }
+      ],
+      "catCandidates": []
+    }
+  },
+  "expectedProposal": {
+    "reportId": "eval-report-kittens-reported-01",
+    "colonyCandidates": [
+      {
+        "colonyId": "colony-1",
+        "evidenceIds": ["eval-report-kittens-reported-01"],
+        "reasons": ["The reporter explicitly places the kittens at Mangrove Lantern."]
+      }
+    ],
+    "catCandidates": [],
+    "observations": [
+      {
+        "kind": "kittens_report",
+        "statement": "The reporter says they saw three small kittens under the storage shed and could not determine whether the mother was nearby.",
+        "source": "reporter",
+        "evidenceIds": ["eval-report-kittens-reported-01"]
+      }
+    ],
+    "urgency": {
+      "level": "same_day_review",
+      "reasons": ["The report of young kittens warrants prompt staff review to assess their situation."],
+      "evidenceIds": ["eval-report-kittens-reported-01"]
+    },
+    "uncertainties": [
+      "The kittens' age, health, and relationship to any adult cat are unverified.",
+      "The report does not establish that the kittens are abandoned or that intervention is needed."
+    ]
+  }
+}

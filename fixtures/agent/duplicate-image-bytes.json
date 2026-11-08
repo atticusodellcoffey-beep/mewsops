@@ -1,0 +1,25 @@
+{
+  "id": "duplicate-image-bytes-06",
+  "mode": "fixture",
+  "synthetic": true,
+  "provenance": "Hand-authored evaluation target. No image asset is available; duplicate-file handling and identity remain untested.",
+  "evaluationStatus": "unresolved_missing_synthetic_assets",
+  "input": {
+    "reportId": "eval-report-duplicate-image-bytes-06",
+    "text": "I uploaded the same photo twice for the Mangrove Lantern colony.",
+    "textEvidenceId": "eval-report-duplicate-image-bytes-06",
+    "images": [],
+    "context": {
+      "colonyCandidates": [{ "colonyId": "colony-1", "name": "Mangrove Lantern" }],
+      "catCandidates": []
+    }
+  },
+  "expectedProposal": {
+    "reportId": "eval-report-duplicate-image-bytes-06",
+    "colonyCandidates": [],
+    "catCandidates": [],
+    "observations": [{ "kind": "upload_claim", "statement": "The reporter says the same photo was uploaded twice.", "source": "reporter", "evidenceIds": ["eval-report-duplicate-image-bytes-06"] }],
+    "urgency": { "level": "routine", "reasons": [], "evidenceIds": ["eval-report-duplicate-image-bytes-06"] },
+    "uncertainties": ["No image bytes are available in this evaluation; duplicate-file handling and cat identity cannot be assessed."]
+  }
+}

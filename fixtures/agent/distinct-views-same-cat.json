@@ -1,0 +1,25 @@
+{
+  "id": "distinct-views-same-cat-07",
+  "mode": "fixture",
+  "synthetic": true,
+  "provenance": "Hand-authored evaluation target. The approved synthetic reference photos and vetted markings are unavailable; no match is asserted.",
+  "evaluationStatus": "unresolved_missing_synthetic_assets",
+  "input": {
+    "reportId": "eval-report-distinct-views-same-cat-07",
+    "text": "Two volunteers photographed a cat at the Mangrove Lantern colony from different angles.",
+    "textEvidenceId": "eval-report-distinct-views-same-cat-07",
+    "images": [],
+    "context": {
+      "colonyCandidates": [{ "colonyId": "colony-1", "name": "Mangrove Lantern" }],
+      "catCandidates": [{ "catId": "cat-1", "colonyId": "colony-1" }]
+    }
+  },
+  "expectedProposal": {
+    "reportId": "eval-report-distinct-views-same-cat-07",
+    "colonyCandidates": [],
+    "catCandidates": [],
+    "observations": [{ "kind": "photo_report", "statement": "The reporter says two different views were submitted.", "source": "reporter", "evidenceIds": ["eval-report-distinct-views-same-cat-07"] }],
+    "urgency": { "level": "routine", "reasons": [], "evidenceIds": ["eval-report-distinct-views-same-cat-07"] },
+    "uncertainties": ["No image assets or vetted appearance descriptions are available, so the same-cat comparison remains unresolved."]
+  }
+}

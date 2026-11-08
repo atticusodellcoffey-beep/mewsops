@@ -1,0 +1,50 @@
+{
+  "id": "suspected-pregnancy-01",
+  "mode": "fixture",
+  "synthetic": true,
+  "provenance": "Hand-authored synthetic evaluation target; not a recorded model run.",
+  "input": {
+    "reportId": "eval-report-suspected-pregnancy-01",
+    "text": "At Mangrove Lantern, I noticed a cat with a round-looking belly and think she might be pregnant.",
+    "textEvidenceId": "eval-report-suspected-pregnancy-01",
+    "observedAt": "2026-11-07T11:30:00.000Z",
+    "images": [],
+    "context": {
+      "colonyCandidates": [
+        {
+          "colonyId": "colony-1",
+          "name": "Mangrove Lantern"
+        }
+      ],
+      "catCandidates": []
+    }
+  },
+  "expectedProposal": {
+    "reportId": "eval-report-suspected-pregnancy-01",
+    "colonyCandidates": [
+      {
+        "colonyId": "colony-1",
+        "evidenceIds": ["eval-report-suspected-pregnancy-01"],
+        "reasons": ["The reporter explicitly places the observation at Mangrove Lantern."]
+      }
+    ],
+    "catCandidates": [],
+    "observations": [
+      {
+        "kind": "pregnancy_suspected",
+        "statement": "The reporter noticed a cat with a round-looking belly and suspects it might be pregnant.",
+        "source": "reporter",
+        "evidenceIds": ["eval-report-suspected-pregnancy-01"]
+      }
+    ],
+    "urgency": {
+      "level": "watch",
+      "reasons": ["The unverified pregnancy concern may need follow-up by colony staff."],
+      "evidenceIds": ["eval-report-suspected-pregnancy-01"]
+    },
+    "uncertainties": [
+      "The cat's pregnancy status is unverified; a round-looking belly alone does not establish pregnancy.",
+      "No cat identity is provided or confirmed, and no image was supplied for visual review."
+    ]
+  }
+}

@@ -1,0 +1,25 @@
+{
+  "id": "blurry-image-09",
+  "mode": "fixture",
+  "synthetic": true,
+  "provenance": "Hand-authored evaluation target. No synthetic blurry photo asset is available; visual uncertainty behavior remains untested.",
+  "evaluationStatus": "unresolved_missing_synthetic_assets",
+  "input": {
+    "reportId": "eval-report-blurry-image-09",
+    "text": "I think this may be Pebble at the Mangrove Lantern colony, but the photo is blurry.",
+    "textEvidenceId": "eval-report-blurry-image-09",
+    "images": [],
+    "context": {
+      "colonyCandidates": [{ "colonyId": "colony-1", "name": "Mangrove Lantern" }],
+      "catCandidates": [{ "catId": "cat-1", "colonyId": "colony-1" }]
+    }
+  },
+  "expectedProposal": {
+    "reportId": "eval-report-blurry-image-09",
+    "colonyCandidates": [],
+    "catCandidates": [],
+    "observations": [{ "kind": "identity_claim", "statement": "The reporter thinks the cat may be Pebble and says the photo is blurry.", "source": "reporter", "evidenceIds": ["eval-report-blurry-image-09"] }],
+    "urgency": { "level": "routine", "reasons": [], "evidenceIds": ["eval-report-blurry-image-09"] },
+    "uncertainties": ["No image is available here to assess blur or compare the cat's appearance."]
+  }
+}

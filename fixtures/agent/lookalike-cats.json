@@ -1,0 +1,28 @@
+{
+  "id": "lookalike-cats-08",
+  "mode": "fixture",
+  "synthetic": true,
+  "provenance": "Hand-authored evaluation target. Approved lookalike photos and grounded descriptions are unavailable; no match is asserted.",
+  "evaluationStatus": "unresolved_missing_synthetic_assets",
+  "input": {
+    "reportId": "eval-report-lookalike-cats-08",
+    "text": "This cat might be Pebble, but another cat looks similar at the Mangrove Lantern colony.",
+    "textEvidenceId": "eval-report-lookalike-cats-08",
+    "images": [],
+    "context": {
+      "colonyCandidates": [{ "colonyId": "colony-1", "name": "Mangrove Lantern" }],
+      "catCandidates": [
+        { "catId": "cat-1", "colonyId": "colony-1" },
+        { "catId": "cat-2", "colonyId": "colony-1" }
+      ]
+    }
+  },
+  "expectedProposal": {
+    "reportId": "eval-report-lookalike-cats-08",
+    "colonyCandidates": [],
+    "catCandidates": [],
+    "observations": [{ "kind": "identity_claim", "statement": "The reporter is uncertain whether the cat is Pebble.", "source": "reporter", "evidenceIds": ["eval-report-lookalike-cats-08"] }],
+    "urgency": { "level": "routine", "reasons": [], "evidenceIds": ["eval-report-lookalike-cats-08"] },
+    "uncertainties": ["The reporter's identity guess is not confirmation; no reference images or distinguishing descriptions are available."]
+  }
+}

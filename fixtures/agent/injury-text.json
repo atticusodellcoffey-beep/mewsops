@@ -1,0 +1,50 @@
+{
+  "id": "injury-text-01",
+  "mode": "fixture",
+  "synthetic": true,
+  "provenance": "Hand-authored synthetic evaluation target; not a recorded model run.",
+  "input": {
+    "reportId": "eval-report-injury-text-01",
+    "text": "At Mangrove Lantern, I saw a cat limping near the feeding area.",
+    "textEvidenceId": "eval-report-injury-text-01",
+    "observedAt": "2026-11-07T11:00:00.000Z",
+    "images": [],
+    "context": {
+      "colonyCandidates": [
+        {
+          "colonyId": "colony-1",
+          "name": "Mangrove Lantern"
+        }
+      ],
+      "catCandidates": []
+    }
+  },
+  "expectedProposal": {
+    "reportId": "eval-report-injury-text-01",
+    "colonyCandidates": [
+      {
+        "colonyId": "colony-1",
+        "evidenceIds": ["eval-report-injury-text-01"],
+        "reasons": ["The reporter explicitly places the observation at Mangrove Lantern."]
+      }
+    ],
+    "catCandidates": [],
+    "observations": [
+      {
+        "kind": "injury_report",
+        "statement": "The reporter says a cat was limping near the feeding area.",
+        "source": "reporter",
+        "evidenceIds": ["eval-report-injury-text-01"]
+      }
+    ],
+    "urgency": {
+      "level": "same_day_review",
+      "reasons": ["The reporter describes a possible injury that needs prompt staff review."],
+      "evidenceIds": ["eval-report-injury-text-01"]
+    },
+    "uncertainties": [
+      "The report is unverified and does not establish a diagnosis or treatment need.",
+      "No cat identity is provided or confirmed, and no image was supplied for visual review."
+    ]
+  }
+}

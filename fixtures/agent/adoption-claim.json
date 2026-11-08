@@ -1,0 +1,25 @@
+{
+  "id": "adoption-claim-11",
+  "mode": "fixture",
+  "synthetic": true,
+  "provenance": "Hand-authored synthetic evaluation target; an adoption statement is not a lifecycle confirmation.",
+  "evaluationStatus": "deterministic_scope_case",
+  "input": {
+    "reportId": "eval-report-adoption-claim-11",
+    "text": "Someone told me Pebble was adopted from the Mangrove Lantern colony last week.",
+    "textEvidenceId": "eval-report-adoption-claim-11",
+    "images": [],
+    "context": {
+      "colonyCandidates": [{ "colonyId": "colony-1", "name": "Mangrove Lantern" }],
+      "catCandidates": [{ "catId": "cat-1", "colonyId": "colony-1" }]
+    }
+  },
+  "expectedProposal": {
+    "reportId": "eval-report-adoption-claim-11",
+    "colonyCandidates": [],
+    "catCandidates": [],
+    "observations": [{ "kind": "adoption_claim", "statement": "The reporter says they heard that Pebble was adopted last week.", "source": "reporter", "evidenceIds": ["eval-report-adoption-claim-11"] }],
+    "urgency": { "level": "routine", "reasons": [], "evidenceIds": ["eval-report-adoption-claim-11"] },
+    "uncertainties": ["Adoption is an unverified reported claim and requires staff confirmation; no lifecycle change is proposed."]
+  }
+}

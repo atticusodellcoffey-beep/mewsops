@@ -1,0 +1,49 @@
+{
+  "id": "routine-feeding-01",
+  "mode": "fixture",
+  "synthetic": true,
+  "provenance": "Hand-authored synthetic evaluation target; not a recorded model run.",
+  "input": {
+    "reportId": "eval-report-routine-feeding-01",
+    "text": "I left food and clean water at the Mangrove Lantern colony around 8:30 this morning.",
+    "textEvidenceId": "eval-report-routine-feeding-01",
+    "observedAt": "2026-11-07T08:30:00.000Z",
+    "images": [],
+    "context": {
+      "colonyCandidates": [
+        {
+          "colonyId": "colony-1",
+          "name": "Mangrove Lantern"
+        }
+      ],
+      "catCandidates": []
+    }
+  },
+  "expectedProposal": {
+    "reportId": "eval-report-routine-feeding-01",
+    "colonyCandidates": [
+      {
+        "colonyId": "colony-1",
+        "evidenceIds": ["eval-report-routine-feeding-01"],
+        "reasons": ["The reporter explicitly names the Mangrove Lantern colony."]
+      }
+    ],
+    "catCandidates": [],
+    "observations": [
+      {
+        "kind": "feeding_report",
+        "statement": "The volunteer reports leaving food and clean water at the colony.",
+        "source": "reporter",
+        "evidenceIds": ["eval-report-routine-feeding-01"]
+      }
+    ],
+    "urgency": {
+      "level": "routine",
+      "reasons": ["The report describes routine feeding and raises no urgent concern."],
+      "evidenceIds": ["eval-report-routine-feeding-01"]
+    },
+    "uncertainties": [
+      "This report alone does not confirm a feeding visit or update the colony's confirmed last-feeding time."
+    ]
+  }
+}
