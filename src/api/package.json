@@ -1,0 +1,8 @@
+{
+  "name": "mewsops-api",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "sharp": "0.34.5"
+  }
+}
