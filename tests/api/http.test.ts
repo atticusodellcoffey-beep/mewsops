@@ -193,7 +193,7 @@ it("validates uploads and enforces owner and current assignment on private reads
       body: new Uint8Array(body),
     });
   const png = Buffer.from(
-    "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jRZkAAAAASUVORK5CYII=",
+    "iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAIAAAD91JpzAAAACXBIWXMAAAPoAAAD6AG1e1JrAAAAEklEQVQImWNYtfvMqt1nGCAUADziCMUJIqEUAAAAAElFTkSuQmCC",
     "base64",
   );
   expect((await upload(Buffer.from("bad"))).status).toBe(400);
